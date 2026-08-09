@@ -8,12 +8,17 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-      - uses: actions/setup-java@v4
+      - name: Setup Java
+        uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: 17
+
+      - name: Generate fresh Gradle Wrapper
+        run: gradle wrapper --gradle-version 9.3.1
 
       - name: Make Gradle executable
         run: chmod +x gradlew
