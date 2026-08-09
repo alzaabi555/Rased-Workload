@@ -44,6 +44,7 @@ fun DistributionScreen(viewModel: DistributionViewModel, subjectViewModel: Subje
     val context = LocalContext.current
     
     var selectedResultIndex by remember { mutableStateOf(0) }
+    var selectedSectionIndex by remember { mutableStateOf(0) }
     var selectedSubjectId by remember { mutableStateOf<Long?>(null) }
     var subjectDropdownExpanded by remember { mutableStateOf(false) }
 
@@ -93,6 +94,7 @@ fun DistributionScreen(viewModel: DistributionViewModel, subjectViewModel: Subje
                                     selectedSubjectId = subject.subjectId
                                     subjectDropdownExpanded = false
                                     selectedResultIndex = 0
+                                    selectedSectionIndex = 0
                                     selectedAssignment = null
                                     viewModel.distribute(subject)
                                 }
@@ -123,6 +125,7 @@ fun DistributionScreen(viewModel: DistributionViewModel, subjectViewModel: Subje
                                 selected = selectedResultIndex == index,
                                 onClick = { 
                                     selectedResultIndex = index 
+                                    selectedSectionIndex = 0
                                     selectedAssignment = null
                                 },
                                 text = { Text("خيار ${index + 1}", style = MaterialTheme.typography.titleSmall) }
@@ -134,75 +137,66 @@ fun DistributionScreen(viewModel: DistributionViewModel, subjectViewModel: Subje
                     
                     val res = resList[selectedResultIndex]
                     
-                    if (res.unassignedClasses.isNotEmpty() || !res.isFeasible) {
-                        Card(
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = MaterialTheme.shapes.large,
-                            colors = CardDefaults.cardColors(
-                                containerColor = if (res.isFeasible) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.errorContainer
-                            ),
-                            elevation = CardDefaults.cardElevation(0.dp)
-                        ) {
-                            Column(modifier = Modifier.padding(20.dp)) {
+                    Card(
+                        modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
+                        shape = MaterialTheme.shapes.large,
+                        colors = CardDefaults.cardColors(
+                            containerColor = if (res.isFeasible) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.errorContainer
+                        ),
+                        elevation = CardDefaults.cardElevation(0.dp)
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    if (res.isFeasible) Icons.Default.CheckCircle else Icons.Default.Warning,
+                                    contentDescription = null,
+                                    tint = if (res.isFeasible) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    if (res.isFeasible) "توزيع قابل للتطبيق" else "توجد تعارضات", 
+                                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                                    color = if (res.isFeasible) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onErrorContainer
+                                )
+                            }
+                            if (!res.isFeasible && res.errors.isNotEmpty()) {
+                                Spacer(modifier = Modifier.height(8.dp))
+                                res.errors.take(2).forEach { Text("• $it", color = MaterialTheme.colorScheme.onErrorContainer, style = MaterialTheme.typography.bodySmall) }
+                            }
+                        }
+                    }
+
+                    TabRow(
+                        selectedTabIndex = selectedSectionIndex,
+                        containerColor = MaterialTheme.colorScheme.surface,
+                        modifier = Modifier.fillMaxWidth().clip(MaterialTheme.shapes.medium)
+                    ) {
+                        Tab(
+                            selected = selectedSectionIndex == 0,
+                            onClick = { selectedSectionIndex = 0 },
+                            text = { Text("جدول الأنصبة", style = MaterialTheme.typography.titleSmall) }
+                        )
+                        Tab(
+                            selected = selectedSectionIndex == 1,
+                            onClick = { selectedSectionIndex = 1 },
+                            text = { 
                                 Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Icon(
-                                        if (res.isFeasible) Icons.Default.CheckCircle else Icons.Default.Warning,
-                                        contentDescription = null,
-                                        tint = if (res.isFeasible) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
-                                    )
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Text(
-                                        if (res.isFeasible) "توزيع قابل للتطبيق" else "توجد تعارضات", 
-                                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                                        color = if (res.isFeasible) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onErrorContainer
-                                    )
-                                }
-                                
-                                if (res.unassignedClasses.isNotEmpty()) {
-                                    Spacer(modifier = Modifier.height(12.dp))
-                                    Text("يوجد ${res.unassignedClasses.size} فصول غير مسندة:", color = MaterialTheme.colorScheme.onErrorContainer, fontWeight = FontWeight.Bold)
-                                    res.unassignedClasses.forEach { ucInfo ->
-                                        val uc = ucInfo.classEntity
-                                        Row(
-                                            modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-                                            horizontalArrangement = Arrangement.SpaceBetween,
-                                            verticalAlignment = Alignment.CenterVertically
-                                        ) {
-                                            Text("• ${uc.name} (${ucInfo.gradeName})", color = MaterialTheme.colorScheme.onErrorContainer, style = MaterialTheme.typography.bodyMedium)
-                                            var assignDropdown by remember { mutableStateOf(false) }
-                                            Box {
-                                                FilledTonalButton(
-                                                    onClick = { assignDropdown = true },
-                                                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp),
-                                                    colors = ButtonDefaults.filledTonalButtonColors(
-                                                        containerColor = MaterialTheme.colorScheme.error,
-                                                        contentColor = MaterialTheme.colorScheme.onError
-                                                    )
-                                                ) {
-                                                    Text("إسناد يدوياً")
-                                                }
-                                                DropdownMenu(expanded = assignDropdown, onDismissRequest = { assignDropdown = false }) {
-                                                    teachers.forEach { teacher ->
-                                                        DropdownMenuItem(text = { Text(teacher.name) }, onClick = {
-                                                            viewModel.assignUnassignedClass(selectedResultIndex, ucInfo, teacher.teacherId, teacher.name)
-                                                            assignDropdown = false
-                                                        })
-                                                    }
-                                                }
-                                            }
+                                    Text("فصول غير مسندة", style = MaterialTheme.typography.titleSmall)
+                                    if (res.unassignedClasses.isNotEmpty()) {
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        Badge(containerColor = MaterialTheme.colorScheme.error) { 
+                                            Text(res.unassignedClasses.size.toString(), color = MaterialTheme.colorScheme.onError) 
                                         }
                                     }
                                 }
-                                if (!res.isFeasible) {
-                                    Spacer(modifier = Modifier.height(8.dp))
-                                    res.errors.take(2).forEach { Text("• $it", color = MaterialTheme.colorScheme.onErrorContainer, style = MaterialTheme.typography.bodySmall) }
-                                }
                             }
-                        }
-                        Spacer(modifier = Modifier.height(16.dp))
+                        )
                     }
-                    
-                    if (res.assignments.isNotEmpty()) {
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    if (selectedSectionIndex == 0) {
+                        if (res.assignments.isNotEmpty()) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
@@ -329,6 +323,57 @@ fun DistributionScreen(viewModel: DistributionViewModel, subjectViewModel: Subje
                                         }
                                     }
                                 }
+                            }
+                        }
+                        } else {
+                            Text("لا توجد أنصبة موزعة.", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(24.dp))
+                        }
+                    } else {
+                        if (res.unassignedClasses.isNotEmpty()) {
+                            LazyColumn(modifier = Modifier.weight(1f), contentPadding = PaddingValues(bottom = 80.dp)) {
+                                item {
+                                    Text("يوجد ${res.unassignedClasses.size} فصول غير مسندة:", color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 12.dp))
+                                }
+                                items(res.unassignedClasses) { ucInfo ->
+                                    val uc = ucInfo.classEntity
+                                    Card(
+                                        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth().padding(16.dp),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Text("• ${uc.name} (${ucInfo.gradeName})", color = MaterialTheme.colorScheme.onErrorContainer, style = MaterialTheme.typography.bodyMedium)
+                                            var assignDropdown by remember { mutableStateOf(false) }
+                                            Box {
+                                                FilledTonalButton(
+                                                    onClick = { assignDropdown = true },
+                                                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp),
+                                                    colors = ButtonDefaults.filledTonalButtonColors(
+                                                        containerColor = MaterialTheme.colorScheme.error,
+                                                        contentColor = MaterialTheme.colorScheme.onError
+                                                    )
+                                                ) {
+                                                    Text("إسناد يدوياً")
+                                                }
+                                                DropdownMenu(expanded = assignDropdown, onDismissRequest = { assignDropdown = false }) {
+                                                    teachers.forEach { teacher ->
+                                                        DropdownMenuItem(text = { Text(teacher.name) }, onClick = {
+                                                            viewModel.assignUnassignedClass(selectedResultIndex, ucInfo, teacher.teacherId, teacher.name)
+                                                            assignDropdown = false
+                                                        })
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        } else {
+                            Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
+                                Text("اكتمل نصاب التوزيع. لا توجد فصول غير مسندة.", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                         }
                     }
