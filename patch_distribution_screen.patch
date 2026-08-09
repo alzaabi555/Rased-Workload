@@ -1,0 +1,55 @@
+--- app/src/main/java/com/example/ui/screens/DistributionScreen.kt
++++ app/src/main/java/com/example/ui/screens/DistributionScreen.kt
+@@ -19,17 +19,20 @@
+ import com.example.domain.DistributionResult
+ import com.example.domain.Assignment
+ import com.example.ui.SettingsViewModel
++import com.example.ui.TeacherViewModel
++import com.example.domain.UnassignedClassInfo
+ 
+ @OptIn(ExperimentalMaterial3Api::class)
+ @Composable
+-fun DistributionScreen(viewModel: DistributionViewModel, subjectViewModel: SubjectViewModel, settingsViewModel: SettingsViewModel) {
++fun DistributionScreen(viewModel: DistributionViewModel, subjectViewModel: SubjectViewModel, settingsViewModel: SettingsViewModel, teacherViewModel: TeacherViewModel) {
+     val subjects by subjectViewModel.subjects.collectAsStateWithLifecycle()
+     val isProcessing by viewModel.isProcessing.collectAsStateWithLifecycle()
+     val results by viewModel.distributionResults.collectAsStateWithLifecycle()
+     val settings by settingsViewModel.settings.collectAsStateWithLifecycle()
++    val teachers by teacherViewModel.teachers.collectAsStateWithLifecycle()
+     val context = LocalContext.current
+     
+     var selectedResultIndex by remember { mutableStateOf(0) }
+@@ -107,10 +110,31 @@
+                         Column(modifier = Modifier.padding(16.dp)) {
+                             if (res.unassignedClasses.isNotEmpty()) {
+                                 Text("فصول غير مسندة: ${res.unassignedClasses.size}", color = MaterialTheme.colorScheme.error)
+-                                res.unassignedClasses.take(3).forEach { uc ->
+-                                    Text("- ${uc.name}", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
++                                res.unassignedClasses.forEach { ucInfo ->
++                                    val uc = ucInfo.classEntity
++                                    Row(
++                                        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
++                                        horizontalArrangement = Arrangement.SpaceBetween,
++                                        verticalAlignment = Alignment.CenterVertically
++                                    ) {
++                                        Text("- ${uc.name} (${ucInfo.gradeName})", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
++                                        var assignDropdown by remember { mutableStateOf(false) }
++                                        Box {
++                                            TextButton(onClick = { assignDropdown = true }, contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)) {
++                                                Text("إسناد يدوياً")
++                                            }
++                                            DropdownMenu(expanded = assignDropdown, onDismissRequest = { assignDropdown = false }) {
++                                                teachers.forEach { teacher ->
++                                                    DropdownMenuItem(text = { Text(teacher.name) }, onClick = {
++                                                        viewModel.assignUnassignedClass(selectedResultIndex, ucInfo, teacher.teacherId, teacher.name)
++                                                        assignDropdown = false
++                                                    })
++                                                }
++                                            }
++                                        }
++                                    }
+                                 }
+-                                if (res.unassignedClasses.size > 3) Text("...", color = MaterialTheme.colorScheme.error)
+                             }
+                             if (!res.isFeasible) {
+                                 res.errors.take(2).forEach { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }

@@ -1,0 +1,51 @@
+--- app/src/main/java/com/example/domain/DistributionEngine.kt
++++ app/src/main/java/com/example/domain/DistributionEngine.kt
+@@ -4,7 +4,7 @@
+ 
+ data class DistributionResult(
+     val assignments: List<Assignment>,
+-    val unassignedClasses: List<ClassEntity>,
++    val unassignedClasses: List<UnassignedClassInfo>,
+     val evaluation: DistributionEvaluation,
+     val isFeasible: Boolean,
+     val errors: List<String>
+@@ -19,6 +19,12 @@
+     val workload: Int
+ )
+ 
++data class UnassignedClassInfo(
++    val classEntity: ClassEntity,
++    val gradeName: String,
++    val workload: Int
++)
++
+ data class DistributionEvaluation(
+     val score: Int, // out of 100
+     val maxWorkloadExceededCount: Int,
+@@ -39,7 +45,7 @@
+     ): DistributionResult {
+         val assignments = mutableListOf<Assignment>()
+         val errors = mutableListOf<String>()
+-        val unassignedClasses = mutableListOf<ClassEntity>()
++        val unassignedClasses = mutableListOf<UnassignedClassInfo>()
+         
+         val teacherMap = teachers.associateBy { it.teacherId }
+         val gradeMap = grades.associateBy { it.gradeId }
+@@ -107,7 +113,7 @@
+                 teacherAssignedLoads[bestTeacherId] = (teacherAssignedLoads[bestTeacherId] ?: 0) + workload
+                 teacherAssignedGrades[bestTeacherId]?.add(c.gradeId)
+             } else {
+-                unassignedClasses.add(c)
++                unassignedClasses.add(UnassignedClassInfo(c, grade.name, workload))
+             }
+         }
+         
+@@ -128,7 +134,7 @@
+ 
+     private fun evaluate(
+         assignments: List<Assignment>,
+-        unassignedClasses: List<ClassEntity>,
++        unassignedClasses: List<UnassignedClassInfo>,
+         teachers: List<TeacherEntity>,
+         teacherCapacities: Map<Long, Int>,
+         teacherAssignedGrades: Map<Long, Set<Long>>

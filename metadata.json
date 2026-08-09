@@ -1,0 +1,6 @@
+{
+  "name": "Rased Workload",
+  "description": "Intelligent Android app for school workload distribution",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,0 +1,50 @@
+--- app/src/main/java/com/example/ui/screens/DistributionScreen.kt
++++ app/src/main/java/com/example/ui/screens/DistributionScreen.kt
+@@ -14,6 +14,8 @@
+ import androidx.compose.ui.unit.dp
+ import androidx.lifecycle.compose.collectAsStateWithLifecycle
+ import com.example.ui.DistributionViewModel
++import com.example.ui.PrintHelper
++import androidx.compose.material.icons.filled.Print
+ import com.example.ui.SubjectViewModel
+ import com.example.domain.DistributionResult
+ 
+@@ -104,22 +106,29 @@
+                         verticalAlignment = Alignment.CenterVertically
+                     ) {
+                         Text("جدول الأنصبة:", style = MaterialTheme.typography.titleMedium)
+-                        IconButton(onClick = { 
+-                            val csvContent = buildString {
+-                                append("المعلم,الصف,الفصل,النصاب\n")
+-                                res.assignments.forEach { a ->
+-                                    append("${a.teacherName},${a.gradeName},${a.className},${a.workload}\n")
++                        Row {
++                            IconButton(onClick = { PrintHelper.printDistributionResult(context, res) }) {
++                                Icon(Icons.Filled.Print, contentDescription = "طباعة / PDF", tint = MaterialTheme.colorScheme.primary)
++                            }
++                            IconButton(onClick = { 
++                                val csvContent = buildString {
++                                    append("المعلم,الصف,الفصل,النصاب\n")
++                                    res.assignments.forEach { a ->
++                                        append("${a.teacherName},${a.gradeName},${a.className},${a.workload}\n")
++                                    }
+                                 }
++                                val sendIntent = Intent(Intent.ACTION_SEND).apply {
++                                    type = "text/csv"
++                                    putExtra(Intent.EXTRA_SUBJECT, "جدول التوزيع")
++                                    putExtra(Intent.EXTRA_TEXT, csvContent)
++                                }
++                                context.startActivity(Intent.createChooser(sendIntent, "تصدير التوزيع كـ CSV"))
++                            }) {
++                                Icon(Icons.Filled.Share, contentDescription = "مشاركة / تصدير", tint = MaterialTheme.colorScheme.primary)
+                             }
+-                            val sendIntent = Intent(Intent.ACTION_SEND).apply {
+-                                type = "text/csv"
+-                                putExtra(Intent.EXTRA_SUBJECT, "جدول التوزيع")
+-                                putExtra(Intent.EXTRA_TEXT, csvContent)
+-                            }
+-                            context.startActivity(Intent.createChooser(sendIntent, "تصدير التوزيع كـ CSV"))
+-                        }) {
+-                            Icon(Icons.Filled.Share, contentDescription = "مشاركة / تصدير", tint = MaterialTheme.colorScheme.primary)
+                         }
+                     }

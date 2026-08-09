@@ -1,0 +1,52 @@
+--- app/src/main/java/com/example/ui/DistributionViewModel.kt
++++ app/src/main/java/com/example/ui/DistributionViewModel.kt
+@@ -10,6 +10,7 @@
+ import com.example.domain.DistributionEngine
+ import com.example.domain.DistributionResult
++import com.example.domain.Assignment
+ import kotlinx.coroutines.flow.MutableStateFlow
+ import kotlinx.coroutines.flow.StateFlow
+ import kotlinx.coroutines.launch
+@@ -53,4 +54,42 @@
+             _isProcessing.value = false
+         }
+     }
++
++    fun reassignClass(resultIndex: Int, assignment: Assignment, newTeacherId: Long, newTeacherName: String) {
++        val results = _distributionResults.value?.toMutableList() ?: return
++        val result = results[resultIndex]
++        val newAssignments = result.assignments.map {
++            if (it.classId == assignment.classId) {
++                it.copy(teacherId = newTeacherId, teacherName = newTeacherName)
++            } else it
++        }
++        results[resultIndex] = result.copy(assignments = newAssignments)
++        _distributionResults.value = results
++    }
++
++    fun swapAssignments(resultIndex: Int, assignment1: Assignment, assignment2: Assignment) {
++        val results = _distributionResults.value?.toMutableList() ?: return
++        val result = results[resultIndex]
++        val newAssignments = result.assignments.map {
++            when (it.classId) {
++                assignment1.classId -> it.copy(teacherId = assignment2.teacherId, teacherName = assignment2.teacherName)
++                assignment2.classId -> it.copy(teacherId = assignment1.teacherId, teacherName = assignment1.teacherName)
++                else -> it
++            }
++        }
++        results[resultIndex] = result.copy(assignments = newAssignments)
++        _distributionResults.value = results
++    }
++
++    fun assignUnassignedClass(resultIndex: Int, classEntity: ClassEntity, gradeName: String, workload: Int, newTeacherId: Long, newTeacherName: String) {
++        val results = _distributionResults.value?.toMutableList() ?: return
++        val result = results[resultIndex]
++        val newAssignment = Assignment(newTeacherId, newTeacherName, classEntity.classId, classEntity.name, classEntity.gradeId, gradeName, workload)
++        
++        val newAssignments = result.assignments.toMutableList().apply { add(newAssignment) }
++        val newUnassigned = result.unassignedClasses.filter { it.classId != classEntity.classId }
++        
++        results[resultIndex] = result.copy(assignments = newAssignments, unassignedClasses = newUnassigned)
++        _distributionResults.value = results
++    }
+ }

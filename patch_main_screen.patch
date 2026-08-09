@@ -1,0 +1,106 @@
+--- app/src/main/java/com/example/ui/MainScreen.kt
++++ app/src/main/java/com/example/ui/MainScreen.kt
+@@ -17,11 +17,14 @@
+ import androidx.navigation.compose.composable
+ import androidx.navigation.compose.currentBackStackEntryAsState
+ import androidx.navigation.compose.rememberNavController
++import android.content.Context
++import androidx.compose.ui.platform.LocalContext
+ import com.example.ui.navigation.Routes
+ import com.example.ui.screens.DashboardScreen
+ import com.example.ui.screens.DistributionScreen
+ import com.example.ui.screens.SettingsScreen
+ import com.example.ui.screens.SubjectsScreen
+ import com.example.ui.screens.TeachersScreen
++import com.example.ui.screens.WelcomeScreen
+ 
+ @Composable
+@@ -32,6 +35,10 @@
+     settingsViewModel: SettingsViewModel
+ ) {
+     val navController = rememberNavController()
++    
++    val context = LocalContext.current
++    val sharedPrefs = context.getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
++    val hasSeenWelcome = sharedPrefs.getBoolean("has_seen_welcome", false)
+ 
+     val items = listOf(
+         Triple(Routes.DASHBOARD, "الرئيسية", Icons.Filled.Dashboard),
+@@ -43,30 +50,33 @@
+ 
+     Scaffold(
+         bottomBar = {
+-            NavigationBar(
+-                containerColor = MaterialTheme.colorScheme.surfaceVariant,
+-                contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+-            ) {
+-                val navBackStackEntry by navController.currentBackStackEntryAsState()
+-                val currentDestination = navBackStackEntry?.destination
+-                items.forEach { (route, label, icon) ->
+-                    NavigationBarItem(
+-                        icon = { Icon(icon, contentDescription = label) },
+-                        label = { Text(label) },
+-                        selected = currentDestination?.hierarchy?.any { it.route == route } == true,
+-                        colors = NavigationBarItemDefaults.colors(
+-                            indicatorColor = MaterialTheme.colorScheme.secondaryContainer,
+-                            selectedIconColor = MaterialTheme.colorScheme.onSecondaryContainer,
+-                            unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+-                        ),
+-                        onClick = {
+-                            navController.navigate(route) {
+-                                popUpTo(navController.graph.findStartDestination().id) {
+-                                    saveState = true
+-                                }
+-                                launchSingleTop = true
+-                                restoreState = true
+-                            }
+-                        }
+-                    )
+-                }
++            val navBackStackEntry by navController.currentBackStackEntryAsState()
++            val currentDestination = navBackStackEntry?.destination
++            if (currentDestination?.route != Routes.WELCOME) {
++                NavigationBar(
++                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
++                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant
++                ) {
++                    items.forEach { (route, label, icon) ->
++                        NavigationBarItem(
++                            icon = { Icon(icon, contentDescription = label) },
++                            label = { Text(label) },
++                            selected = currentDestination?.hierarchy?.any { it.route == route } == true,
++                            colors = NavigationBarItemDefaults.colors(
++                                indicatorColor = MaterialTheme.colorScheme.secondaryContainer,
++                                selectedIconColor = MaterialTheme.colorScheme.onSecondaryContainer,
++                                unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
++                            ),
++                            onClick = {
++                                navController.navigate(route) {
++                                    popUpTo(navController.graph.findStartDestination().id) {
++                                        saveState = true
++                                    }
++                                    launchSingleTop = true
++                                    restoreState = true
++                                }
++                            }
++                        )
++                    }
++                }
+             }
+         }
+     ) { innerPadding ->
+         NavHost(
+             navController = navController,
+-            startDestination = Routes.DASHBOARD,
++            startDestination = if (hasSeenWelcome) Routes.DASHBOARD else Routes.WELCOME,
+             modifier = Modifier.padding(innerPadding)
+         ) {
++            composable(Routes.WELCOME) {
++                WelcomeScreen(onStartClicked = {
++                    sharedPrefs.edit().putBoolean("has_seen_welcome", true).apply()
++                    navController.navigate(Routes.DASHBOARD) {
++                        popUpTo(Routes.WELCOME) { inclusive = true }
++                    }
++                })
++            }
+             composable(Routes.DASHBOARD) { DashboardScreen(distributionViewModel, subjectViewModel, teacherViewModel, settingsViewModel) }
