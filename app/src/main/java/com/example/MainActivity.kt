@@ -22,7 +22,7 @@ class MainActivity : ComponentActivity() {
     enableEdgeToEdge()
     
     val app = application as WorkloadApplication
-    val factory = AppViewModelFactory(app.repository)
+    val factory = AppViewModelFactory(app.repository, app)
     
     val subjectViewModel = ViewModelProvider(this, factory)[SubjectViewModel::class.java]
     val teacherViewModel = ViewModelProvider(this, factory)[TeacherViewModel::class.java]
