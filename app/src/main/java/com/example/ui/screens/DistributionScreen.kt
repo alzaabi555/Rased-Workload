@@ -15,8 +15,10 @@ import androidx.compose.material.icons.automirrored.filled.Assignment
 import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material.icons.filled.Print
 import androidx.compose.material.icons.filled.Group
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -43,13 +45,22 @@ fun DistributionScreen(viewModel: DistributionViewModel, subjectViewModel: Subje
     val teachers by teacherViewModel.teachers.collectAsStateWithLifecycle()
     val context = LocalContext.current
     
-    var selectedResultIndex by remember { mutableStateOf(0) }
-    var selectedSectionIndex by remember { mutableStateOf(0) }
-    var selectedSubjectId by remember { mutableStateOf<Long?>(null) }
+    var selectedResultIndex by rememberSaveable { mutableStateOf(0) }
+    var selectedSectionIndex by rememberSaveable { mutableStateOf(0) }
+    var selectedSubjectId by rememberSaveable { mutableStateOf<Long?>(null) }
     var subjectDropdownExpanded by remember { mutableStateOf(false) }
-
     var selectedAssignment by remember { mutableStateOf<Assignment?>(null) }
     
+    LaunchedEffect(selectedSubjectId, subjects) {
+        val id = selectedSubjectId
+        if (id != null && subjects.isNotEmpty()) {
+            val subject = subjects.find { it.subjectId == id }
+            if (subject != null) {
+                viewModel.loadOrDistribute(subject)
+            }
+        }
+    }
+
     Column(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
         
         // Header
@@ -68,37 +79,49 @@ fun DistributionScreen(viewModel: DistributionViewModel, subjectViewModel: Subje
             if (subjects.isEmpty()) {
                 Text("لا توجد مواد لإجراء التوزيع.", style = MaterialTheme.typography.bodyLarge)
             } else {
-                ExposedDropdownMenuBox(
-                    expanded = subjectDropdownExpanded,
-                    onExpandedChange = { subjectDropdownExpanded = !subjectDropdownExpanded }
-                ) {
-                    val selectedSubject = subjects.find { it.subjectId == selectedSubjectId }
-                    OutlinedTextField(
-                        readOnly = true,
-                        value = selectedSubject?.name ?: "اختر المادة للبدء",
-                        onValueChange = { },
-                        label = { Text("المادة الدراسية") },
-                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = subjectDropdownExpanded) },
-                        colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(),
-                        shape = MaterialTheme.shapes.large,
-                        modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable, enabled = true).fillMaxWidth()
-                    )
-                    ExposedDropdownMenu(
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                    ExposedDropdownMenuBox(
                         expanded = subjectDropdownExpanded,
-                        onDismissRequest = { subjectDropdownExpanded = false }
+                        onExpandedChange = { subjectDropdownExpanded = !subjectDropdownExpanded },
+                        modifier = Modifier.weight(1f)
                     ) {
-                        subjects.forEach { subject ->
-                            DropdownMenuItem(
-                                text = { Text(subject.name, style = MaterialTheme.typography.bodyLarge) },
-                                onClick = {
-                                    selectedSubjectId = subject.subjectId
-                                    subjectDropdownExpanded = false
-                                    selectedResultIndex = 0
-                                    selectedSectionIndex = 0
-                                    selectedAssignment = null
-                                    viewModel.distribute(subject)
-                                }
-                            )
+                        val selectedSubject = subjects.find { it.subjectId == selectedSubjectId }
+                        OutlinedTextField(
+                            readOnly = true,
+                            value = selectedSubject?.name ?: "اختر المادة للبدء",
+                            onValueChange = { },
+                            label = { Text("المادة الدراسية") },
+                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = subjectDropdownExpanded) },
+                            colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(),
+                            shape = MaterialTheme.shapes.large,
+                            modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable, enabled = true).fillMaxWidth()
+                        )
+                        ExposedDropdownMenu(
+                            expanded = subjectDropdownExpanded,
+                            onDismissRequest = { subjectDropdownExpanded = false }
+                        ) {
+                            subjects.forEach { subject ->
+                                DropdownMenuItem(
+                                    text = { Text(subject.name, style = MaterialTheme.typography.bodyLarge) },
+                                    onClick = {
+                                        selectedSubjectId = subject.subjectId
+                                        subjectDropdownExpanded = false
+                                        selectedResultIndex = 0
+                                        selectedSectionIndex = 0
+                                        selectedAssignment = null
+                                    }
+                                )
+                            }
+                        }
+                    }
+                    
+                    val selectedSubject = subjects.find { it.subjectId == selectedSubjectId }
+                    if (selectedSubject != null && !isProcessing) {
+                        Spacer(modifier = Modifier.width(16.dp))
+                        FilledTonalButton(onClick = { viewModel.distribute(selectedSubject) }) {
+                            Icon(Icons.Default.Refresh, contentDescription = "إعادة التوزيع")
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("إعادة التوزيع")
                         }
                     }
                 }

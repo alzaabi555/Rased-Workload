@@ -26,7 +26,7 @@ object PrintHelper {
                     .header { text-align: center; margin-bottom: 20px; }
                     .school-name { font-size: 24px; font-weight: bold; }
                     .preparer { font-size: 16px; color: #555; }
-                    .teacher-section { margin-bottom: 30px; border: 1px solid #ccc; padding: 10px; border-radius: 8px; }
+                    .teacher-section { margin-bottom: 30px; border: 1px solid #ccc; padding: 10px; border-radius: 8px; page-break-inside: avoid; }
                     .teacher-name { font-size: 18px; font-weight: bold; background-color: #f0f0f0; padding: 8px; margin-top: 0; }
                     table { width: 100%; border-collapse: collapse; margin-top: 10px; }
                     th, td { border: 1px solid #ddd; padding: 8px; text-align: right; }

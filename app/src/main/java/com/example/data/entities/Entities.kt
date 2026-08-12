@@ -9,6 +9,8 @@ import androidx.room.Embedded
 import androidx.room.Relation
 import androidx.room.Junction
 
+import com.squareup.moshi.JsonClass
+
 @Entity(tableName = "subjects")
 data class SubjectEntity(
     @PrimaryKey(autoGenerate = true) val subjectId: Long = 0,
@@ -50,6 +52,7 @@ data class GradeEntity(
     ],
     indices = [Index("gradeId")]
 )
+@JsonClass(generateAdapter = true)
 data class ClassEntity(
     @PrimaryKey(autoGenerate = true) val classId: Long = 0,
     val gradeId: Long,

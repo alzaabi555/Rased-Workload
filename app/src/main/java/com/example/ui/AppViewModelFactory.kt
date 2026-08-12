@@ -4,7 +4,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import com.example.data.WorkloadRepository
 
-class AppViewModelFactory(private val repository: WorkloadRepository) : ViewModelProvider.Factory {
+import android.app.Application
+
+class AppViewModelFactory(private val repository: WorkloadRepository, private val application: Application) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(SubjectViewModel::class.java)) {
             @Suppress("UNCHECKED_CAST")
@@ -16,7 +18,7 @@ class AppViewModelFactory(private val repository: WorkloadRepository) : ViewMode
         }
         if (modelClass.isAssignableFrom(DistributionViewModel::class.java)) {
             @Suppress("UNCHECKED_CAST")
-            return DistributionViewModel(repository) as T
+            return DistributionViewModel(repository, application) as T
         }
         if (modelClass.isAssignableFrom(SettingsViewModel::class.java)) {
             @Suppress("UNCHECKED_CAST")

@@ -4,12 +4,16 @@ import com.example.data.entities.*
 import kotlin.math.abs
 import kotlin.math.max
 
+import com.squareup.moshi.JsonClass
+
+@JsonClass(generateAdapter = true)
 data class UnassignedClassInfo(
     val classEntity: ClassEntity,
     val gradeName: String,
     val workload: Int
 )
 
+@JsonClass(generateAdapter = true)
 data class DistributionResult(
     val assignments: List<Assignment>,
     val unassignedClasses: List<UnassignedClassInfo>,
@@ -18,6 +22,7 @@ data class DistributionResult(
     val errors: List<String>
 )
 
+@JsonClass(generateAdapter = true)
 data class Assignment(
     val teacherId: Long,
     val teacherName: String,
@@ -28,6 +33,7 @@ data class Assignment(
     val workload: Int
 )
 
+@JsonClass(generateAdapter = true)
 data class DistributionEvaluation(
     val score: Int, // out of 100
     val maxWorkloadExceededCount: Int,
@@ -108,15 +114,12 @@ class DistributionEngine {
                 // Hard Constraints
                 if (currentLoad + workload > capacity) continue // Exceeds load
                 
-                val newGradesCount = if (currentGrades.contains(c.gradeId)) currentGrades.size else currentGrades.size + 1
-                if (newGradesCount > teacher.maxDifferentGrades) continue // Exceeds distinct grades
-                
                 val allowed = teacherAllowedGrades[tId] ?: emptyList()
                 if (allowed.isNotEmpty() && allowed.none { it.gradeId == c.gradeId }) continue // Not allowed
                 
                 // Soft constraints score (lower is better)
-                // 1. Prefer if teacher already has this grade
-                val gradePenalty = if (currentGrades.contains(c.gradeId)) 0.0 else 10.0
+                val newGradesCount = if (currentGrades.contains(c.gradeId)) currentGrades.size else currentGrades.size + 1
+                val gradePenalty = if (newGradesCount > teacher.maxDifferentGrades) 1000.0 else if (currentGrades.contains(c.gradeId)) 0.0 else 10.0
                 
                 // 2. Prefer balancing occupancy
                 val occupancyAfter = (currentLoad + workload).toDouble() / (capacity.takeIf { it > 0 } ?: 1)

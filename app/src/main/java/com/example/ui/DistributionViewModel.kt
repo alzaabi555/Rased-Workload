@@ -1,5 +1,7 @@
 package com.example.ui
 
+import android.app.Application
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.data.WorkloadRepository
@@ -13,19 +15,64 @@ import com.example.domain.Assignment
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import com.squareup.moshi.Moshi
+import com.squareup.moshi.Types
+import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
+import java.io.File
 
-class DistributionViewModel(private val repository: WorkloadRepository) : ViewModel() {
+class DistributionViewModel(private val repository: WorkloadRepository, private val application: Application) : ViewModel() {
+
     private val engine = DistributionEngine()
+    private val moshi = Moshi.Builder().addLast(KotlinJsonAdapterFactory()).build()
+    private val listType = Types.newParameterizedType(List::class.java, DistributionResult::class.java)
+    private val adapter = moshi.adapter<List<DistributionResult>>(listType)
     
     private val _distributionResults = MutableStateFlow<List<DistributionResult>?>(null)
     val distributionResults: StateFlow<List<DistributionResult>?> = _distributionResults
     
     private val _isProcessing = MutableStateFlow(false)
     val isProcessing: StateFlow<Boolean> = _isProcessing
+    
+    private var currentSubjectId: Long? = null
+
+    fun loadOrDistribute(subject: SubjectEntity) {
+        viewModelScope.launch {
+            val file = File(application.filesDir, "distribution_subject_\${subject.subjectId}.json")
+            if (file.exists()) {
+                try {
+                    val json = file.readText()
+                    val results = adapter.fromJson(json)
+                    _distributionResults.value = results
+                    currentSubjectId = subject.subjectId
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                    distribute(subject)
+                }
+            } else {
+                distribute(subject)
+                currentSubjectId = subject.subjectId
+            }
+        }
+    }
+
+    private fun saveCurrentDistribution() {
+        val subjectId = currentSubjectId ?: return
+        val results = _distributionResults.value ?: return
+        viewModelScope.launch {
+            try {
+                val json = adapter.toJson(results)
+                val file = File(application.filesDir, "distribution_subject_\${subject.subjectId}.json")
+                file.writeText(json)
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
 
     fun distribute(subject: SubjectEntity) {
         viewModelScope.launch {
             _isProcessing.value = true
+            currentSubjectId = subject.subjectId
             
             // Gather data for subject
             val grades = repository.getGradesForSubjectSync(subject.subjectId)
@@ -57,6 +104,7 @@ class DistributionViewModel(private val repository: WorkloadRepository) : ViewMo
             results.sortByDescending { it.evaluation.score }
             
             _distributionResults.value = results
+            saveCurrentDistribution()
             _isProcessing.value = false
         }
     }
@@ -71,6 +119,7 @@ class DistributionViewModel(private val repository: WorkloadRepository) : ViewMo
         }
         results[resultIndex] = result.copy(assignments = newAssignments)
         _distributionResults.value = results
+        saveCurrentDistribution()
     }
 
     fun swapAssignments(resultIndex: Int, assignment1: Assignment, assignment2: Assignment) {
@@ -85,6 +134,7 @@ class DistributionViewModel(private val repository: WorkloadRepository) : ViewMo
         }
         results[resultIndex] = result.copy(assignments = newAssignments)
         _distributionResults.value = results
+        saveCurrentDistribution()
     }
 
     fun assignUnassignedClass(resultIndex: Int, classInfo: com.example.domain.UnassignedClassInfo, newTeacherId: Long, newTeacherName: String) {
@@ -98,5 +148,6 @@ class DistributionViewModel(private val repository: WorkloadRepository) : ViewMo
         
         results[resultIndex] = result.copy(assignments = newAssignments, unassignedClasses = newUnassigned)
         _distributionResults.value = results
+        saveCurrentDistribution()
     }
 }
